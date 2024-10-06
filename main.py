@@ -8,11 +8,10 @@ Kelas : Keamanan Informasi (B)
 
 Keterbatasan: maksimal 8 karakter saja
 Note: 
-- jika input lebih dari 8 karakter, akan dipotong ke 8 karakter
-- jika input kurang dari 8 karakter, akan diisi dengan hex 00
 - jika key lebih dari 8 karakter, akan dipotong ke 8 karakter
 - jika key kurang dari 8 karakter, akan diisi dengan '0'
 - implementasi ini terinspirasi dari https://medium.com/@ziaullahrajpoot/data-encryption-standard-des-dc8610aafdb3
+- testing dilakukan menggunakan http://des.online-domain-tools.com/
 
 """
 
@@ -144,8 +143,9 @@ def str_to_bin(inp):
     for c in inp:
         bin_c = format(ord(c), '08b')
         bin_str += bin_c
-    # Tambahin atau potong biar pas 64 bit
-    bin_str = bin_str[:64].ljust(64, '0')
+    # Tambahkan padding agar panjangnya kelipatan 64 bit
+    padding_len = (64 - len(bin_str) % 64) if len(bin_str) % 64 != 0 else 0
+    bin_str = bin_str.ljust(len(bin_str) + padding_len, '0')
     return bin_str
 
 def bin_to_ascii(bin_s):
@@ -154,13 +154,14 @@ def bin_to_ascii(bin_s):
 
 def bin_to_hex(bin_s):
     hex_s = hex(int(bin_s, 2))[2:].upper()
-    # Pastikan 16 digit hexa (64 bit)
-    hex_s = hex_s.zfill(16)
+    # Pastikan kelipatan 16 digit hexa (64 bit per blok)
+    hex_length = (len(bin_s) // 4)
+    hex_s = hex_s.zfill(hex_length)
     return hex_s
 
 def permute_ip(bin_inp):
-    # Lakuin permutasi awal
-    res = [None] * 64
+    # Lakukan permutasi awal
+    res = ['0'] * 64
     for i in range(64):
         res[i] = bin_inp[tbl_ip[i] - 1]
     return ''.join(res)
@@ -193,9 +194,11 @@ def buat_keys(key_bin):
         keys.append(round_key)
     return keys
 
-def encrypt(inp, keys):
-    bin_inp = str_to_bin(inp)
-    ip = permute_ip(bin_inp)
+def xor_bin(bin1, bin2):
+    return ''.join(['0' if bin1[i] == bin2[i] else '1' for i in range(len(bin1))])
+
+def encrypt_ecb(block, keys):
+    ip = permute_ip(block)
     left = ip[:32]
     right = ip[32:]
     for r in range(16):
@@ -221,18 +224,11 @@ def encrypt(inp, keys):
     final = right + left
     # Permutasi akhir
     cipher_bin = ''.join([final[tbl_ip_inv[i] - 1] for i in range(64)])
-    # Ubah jadi ASCII dan Hex
-    cipher_ascii = bin_to_ascii(cipher_bin)
-    print("Cipher Akhir (ASCII):", cipher_ascii)
-    cipher_hex = bin_to_hex(cipher_bin)
-    print("Cipher Akhir (Hex):", cipher_hex)
-    return cipher_hex
+    return cipher_bin
 
-def decrypt(cipher_hx, keys):
-    # Ubah hex jadi binary
-    cipher_bin = bin(int(cipher_hx, 16))[2:].zfill(64)
-    # Permutasi awal
-    ip = permute_ip(cipher_bin)
+def decrypt_ecb(block, keys):
+    # Ubah binary blok
+    ip = permute_ip(block)
     left = ip[:32]
     right = ip[32:]
     for r in range(16):
@@ -259,32 +255,117 @@ def decrypt(cipher_hx, keys):
     final = right + left
     # Permutasi akhir
     plain_bin = ''.join([final[tbl_ip_inv[i] - 1] for i in range(64)])
-    # Ubah jadi ASCII
+    return plain_bin
+
+def encrypt_cbc(bin_inp, keys, iv_bin):
+    blocks = [bin_inp[i:i+64] for i in range(0, len(bin_inp), 64)]
+    cipher_blocks = []
+    previous = iv_bin
+    for block in blocks:
+        # Pastikan blok berukuran 64 bit
+        if len(block) < 64:
+            block = block.ljust(64, '0')
+        # XOR dengan previous ciphertext (IV untuk blok pertama)
+        block = xor_bin(block, previous)
+        # Enkripsi blok
+        cipher = encrypt_ecb(block, keys)
+        cipher_blocks.append(cipher)
+        previous = cipher
+    cipher_bin = ''.join(cipher_blocks)
+    cipher_hex = bin_to_hex(cipher_bin)
+    print("Cipher Akhir (Hex - CBC):", cipher_hex)
+    return cipher_hex
+
+def decrypt_cbc(cipher_hx, keys, iv_bin):
+    # Ubah hex jadi binary
+    cipher_bin = bin(int(cipher_hx, 16))[2:].zfill(64 * ((len(cipher_hx) + 15) // 16))
+    blocks = [cipher_bin[i:i+64] for i in range(0, len(cipher_bin), 64)]
+    plain_blocks = []
+    previous = iv_bin
+    for block in blocks:
+        # Dekripsi blok
+        decrypted = decrypt_ecb(block, keys)
+        # XOR dengan previous ciphertext (IV untuk blok pertama)
+        plain = xor_bin(decrypted, previous)
+        plain_blocks.append(plain)
+        previous = block
+    plain_bin = ''.join(plain_blocks)
+    # Menghapus padding '0's yang ditambahkan selama enkripsi
+    plain_bin = plain_bin.rstrip('0')
     plain_ascii = bin_to_ascii(plain_bin)
-    print("Hasil Dekripsi Cipher (ASCII):", plain_ascii)
+    print("Hasil Dekripsi Cipher (ASCII - CBC):", plain_ascii)
     return plain_ascii
 
+def encrypt_ecb_mode(bin_inp, keys):
+    blocks = [bin_inp[i:i+64] for i in range(0, len(bin_inp), 64)]
+    cipher_bin = ''
+    for block in blocks:
+        # Pastikan blok berukuran 64 bit
+        if len(block) < 64:
+            block = block.ljust(64, '0')
+        cipher_bin += encrypt_ecb(block, keys)
+    cipher_ascii = bin_to_ascii(cipher_bin)
+    print("Cipher Akhir (ASCII - ECB):", cipher_ascii)
+    cipher_hex = bin_to_hex(cipher_bin)
+    print("Cipher Akhir (Hex - ECB):", cipher_hex)
+    return cipher_hex
 
-user = input("Masukin string (maks 8 karakter): ")
+def decrypt_ecb_mode(cipher_hx, keys):
+    cipher_bin = bin(int(cipher_hx, 16))[2:].zfill(64 * ((len(cipher_hx) + 15) // 16))
+    blocks = [cipher_bin[i:i+64] for i in range(0, len(cipher_bin), 64)]
+    plain_bin = ''
+    for block in blocks:
+        plain_bin += decrypt_ecb(block, keys)
+    # Menghapus padding '0's yang ditambahkan selama enkripsi
+    plain_bin = plain_bin.rstrip('0')
+    plain_ascii = bin_to_ascii(plain_bin)
+    print("Hasil Dekripsi Cipher (ASCII - ECB):", plain_ascii)
+    return plain_ascii
 
-if len(user) > 8:
-    print("Input lebih dari 8 karakter. Akan dipotong ke 8 karakter.")
-    user = user[:8]
+# Fungsi utama untuk enkripsi dan dekripsi dengan pilihan mode
+def main():
+    user = input("Masukkan string: ")
+    
+    key_input = input("Masukkan key (8 karakter): ")
+    
+    # Pastikan key tepat 8 karakter
+    if len(key_input) < 8:
+        print("Key kurang dari 8 karakter, akan diisi dengan '0'.")
+        key_input = key_input.ljust(8, '0')
+    elif len(key_input) > 8:
+        print("Key lebih dari 8 karakter, akan dipotong ke 8 karakter.")
+        key_input = key_input[:8]
+    
+    key_bin = convert_key(key_input)
+    
+    keys = buat_keys(key_bin)
+    
+    # Pilih mode
+    mode = input("Pilih mode (ECB/CBC): ").strip().upper()
+    while mode not in ['ECB', 'CBC']:
+        print("Mode tidak valid. Pilih antara ECB atau CBC.")
+        mode = input("Pilih mode (ECB/CBC): ").strip().upper()
+    
+    if mode == 'ECB':
+        bin_inp = str_to_bin(user)
+        print("========== Hasil ==========")
+        ciph = encrypt_ecb_mode(bin_inp, keys)
+        decr = decrypt_ecb_mode(ciph, keys)
+    else:
+        # Input IV
+        iv = input("Masukkan IV (8 karakter): ")
+        if len(iv) < 8:
+            print("IV kurang dari 8 karakter, akan diisi dengan '0'.")
+            iv = iv.ljust(8, '0')
+        elif len(iv) > 8:
+            print("IV lebih dari 8 karakter, akan dipotong ke 8 karakter.")
+            iv = iv[:8]
+        iv_bin = convert_key(iv)
+        
+        print("========== Hasil ==========")
+        bin_inp = str_to_bin(user)
+        ciph = encrypt_cbc(bin_inp, keys, iv_bin)
+        decr = decrypt_cbc(ciph, keys, iv_bin)
 
-key_input = input("Masukin key (8 karakter): ")
-
-# Pastikan key tepat 8 karakter
-if len(key_input) < 8:
-    print("Key kurang dari 8 karakter, akan diisi dengan '0'.")
-    key_input = key_input.ljust(8, '0')
-elif len(key_input) > 8:
-    print("Key lebih dari 8 karakter, akan dipotong ke 8 karakter.")
-    key_input = key_input[:8]
-
-key_bin = convert_key(key_input)
-
-keys = buat_keys(key_bin)
-
-ciph = encrypt(user, keys)
-
-decr = decrypt(ciph, keys)
+if __name__ == "__main__":
+    main()
