@@ -7,7 +7,12 @@ Keamanan Informasi (B)
 
 
 ## Pembagian Kerja
-- Moch. Avin: algoritma DES dan implementasi socket server dan client.  
+- Moch. Avin: algoritma DES dan implementasi socket server dan client.
+
+
+## Hasil
+![Hasil Test](https://github.com/user-attachments/assets/fe26a919-4ce2-4cdb-bdea-82af92c7204b)
+
 
 ## Keterbatasan Implementasi:
 - Jika **key** lebih dari 8 karakter, akan dipotong menjadi 8 karakter.
