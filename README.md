@@ -1,13 +1,15 @@
-# Implementasi DES Algorithm
+# Implementasi DES Algorithm dan Socket Server dan Client
+Keamanan Informasi (B)
 
-**Nama**  : Moch. Avin  
-**NRP**   : 5025221061  
-**Kelas** : Keamanan Informasi (B)
+| Nama        | NRP         |
+|-------------|-------------|
+| Moch. Avin  | 5025221061  |
+
+
+## Pembagian Kerja
+- Moch. Avin: algoritma DES dan implementasi socket server dan client.  
 
 ## Keterbatasan Implementasi:
-- Maksimal panjang input dan kunci adalah **8 karakter**.
-- Jika **input** lebih dari 8 karakter, akan dipotong menjadi 8 karakter.
-- Jika **input** kurang dari 8 karakter, sisa karakter akan diisi dengan nilai **hex 00**.
 - Jika **key** lebih dari 8 karakter, akan dipotong menjadi 8 karakter.
 - Jika **key** kurang dari 8 karakter, sisa karakter akan diisi dengan angka **'0'**.
 

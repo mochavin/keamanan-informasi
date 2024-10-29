@@ -159,6 +159,11 @@ def bin_to_hex(bin_s):
     hex_s = hex_s.zfill(hex_length)
     return hex_s
 
+def hex_to_bin(hex_s):
+    # Konversi hex ke binary, pastikan panjangnya benar
+    bin_s = bin(int(hex_s, 16))[2:].zfill(len(hex_s) * 4)
+    return bin_s
+
 def permute_ip(bin_inp):
     # Lakukan permutasi awal
     res = ['0'] * 64
@@ -273,7 +278,7 @@ def encrypt_cbc(bin_inp, keys, iv_bin):
         previous = cipher
     cipher_bin = ''.join(cipher_blocks)
     cipher_hex = bin_to_hex(cipher_bin)
-    print("Cipher Akhir (Hex - CBC):", cipher_hex)
+    print("Cipher (Hex - CBC):", cipher_hex)
     return cipher_hex
 
 def decrypt_cbc(cipher_hx, keys, iv_bin):
@@ -293,37 +298,53 @@ def decrypt_cbc(cipher_hx, keys, iv_bin):
     # Menghapus padding '0's yang ditambahkan selama enkripsi
     plain_bin = plain_bin.rstrip('0')
     plain_ascii = bin_to_ascii(plain_bin)
-    print("Hasil Dekripsi Cipher (ASCII - CBC):", plain_ascii)
+    # print("Hasil Dekripsi Cipher (ASCII - CBC):", plain_ascii)
     return plain_ascii
 
 def encrypt_ecb_mode(bin_inp, keys):
     blocks = [bin_inp[i:i+64] for i in range(0, len(bin_inp), 64)]
-    cipher_bin = ''
+    cipher_blocks = []
+    
     for block in blocks:
         # Pastikan blok berukuran 64 bit
         if len(block) < 64:
             block = block.ljust(64, '0')
-        cipher_bin += encrypt_ecb(block, keys)
-    cipher_ascii = bin_to_ascii(cipher_bin)
-    print("Cipher Akhir (ASCII - ECB):", cipher_ascii)
+        cipher_block = encrypt_ecb(block, keys)
+        cipher_blocks.append(cipher_block)
+    
+    cipher_bin = ''.join(cipher_blocks)
     cipher_hex = bin_to_hex(cipher_bin)
-    print("Cipher Akhir (Hex - ECB):", cipher_hex)
+    print("Cipher (Hex - ECB):", cipher_hex)
     return cipher_hex
 
 def decrypt_ecb_mode(cipher_hx, keys):
-    cipher_bin = bin(int(cipher_hx, 16))[2:].zfill(64 * ((len(cipher_hx) + 15) // 16))
+    cipher_bin = hex_to_bin(cipher_hx)
     blocks = [cipher_bin[i:i+64] for i in range(0, len(cipher_bin), 64)]
-    plain_bin = ''
+    plain_blocks = []
+    
     for block in blocks:
-        plain_bin += decrypt_ecb(block, keys)
-    # Menghapus padding '0's yang ditambahkan selama enkripsi
-    plain_bin = plain_bin.rstrip('0')
-    plain_ascii = bin_to_ascii(plain_bin)
-    print("Hasil Dekripsi Cipher (ASCII - ECB):", plain_ascii)
-    return plain_ascii
+        decrypted_block = decrypt_ecb(block, keys)
+        plain_blocks.append(decrypted_block)
+    
+    plain_bin = ''.join(plain_blocks)
+    
+    # Hapus padding dengan mencari karakter yang berarti
+    # Konversi setiap 8 bit ke karakter sampai menemui padding
+    plain_chars = []
+    for i in range(0, len(plain_bin), 8):
+        char_bin = plain_bin[i:i+8]
+        if len(char_bin) == 8:  # Pastikan panjang 8 bit
+            char_val = int(char_bin, 2)
+            if char_val != 0:  # Bukan padding
+                plain_chars.append(chr(char_val))
+    
+    plain_text = ''.join(plain_chars)
+    # print("Hasil Dekripsi Cipher (ASCII - ECB):", plain_text)
+    return plain_text
+
 
 # Fungsi utama untuk enkripsi dan dekripsi dengan pilihan mode
-def main():
+# def main():
     user = input("Masukkan string: ")
     
     key_input = input("Masukkan key (8 karakter): ")
@@ -367,5 +388,5 @@ def main():
         ciph = encrypt_cbc(bin_inp, keys, iv_bin)
         decr = decrypt_cbc(ciph, keys, iv_bin)
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
