@@ -11,7 +11,7 @@ Keamanan Informasi (B)
 
 
 ## Hasil
-![Hasil Test](https://github.com/user-attachments/assets/fe26a919-4ce2-4cdb-bdea-82af92c7204b)
+![hasil test](/public/image.png)
 
 
 ## Keterbatasan Implementasi:

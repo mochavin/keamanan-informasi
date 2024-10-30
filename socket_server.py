@@ -1,56 +1,69 @@
-# https://www.digitalocean.com/community/tutorials/python-socket-programming-server-client
-# socket server
-
 import socket
-from des import convert_key, buat_keys, str_to_bin, encrypt_ecb_mode, decrypt_ecb_mode
+import threading
 
-def server_program():
-    # Initialize DES encryption
-    KEY = "secretky"  # Shared secret key (8 chars)
-    key_bin = convert_key(KEY)
-    keys = buat_keys(key_bin)
+# Array untuk koneksi
+clnts = []
+
+def hndle(conn, addr):
+    print(f"Tersambung dengan: {addr}")
+    while True:
+        try:
+            # Terima pesan terenkripsi
+            enc_hex = conn.recv(1024).decode()
+            if not enc_hex:
+                break
+            print(f"Cipher (Hex - ECB) dari {addr}: {enc_hex}")
+            
+            # Jika pesan adalah "bye", klien keluar
+            if enc_hex.lower() == "bye":
+                print(f"{addr} keluar.")
+                break
+
+            # Kirim ke klien lain
+            for c in clnts:
+                if c != conn:
+                    c.send(enc_hex.encode())
+                    
+        except:
+            print(f"Kesalahan dengan {addr}")
+            break
     
-    # Set up socket server
+    # Hapus koneksi
+    clnts.remove(conn)
+    conn.close()
+
+def inp_listen(srv_sock):
+    while True:
+        cmd = input("Ketik 'quit' untuk hentikan server: ")
+        if cmd.lower() == "quit":
+            print("Matikan server dan putus koneksi")
+            for c in clnts:
+                c.close()
+            srv_sock.close()
+            break
+
+def srv():
     host = socket.gethostname()
     port = 5000
     
-    server_socket = socket.socket()
-    server_socket.bind((host, port))
-    server_socket.listen(2)
-    
-    print("Server dimulai. Menunggu klien...")
-    conn, address = server_socket.accept()
-    print(f"Terhubung dengan: {address}")
-    try:
-        while True:
-            # Receive encrypted message
-            encrypted_hex = conn.recv(1024).decode()
-            if not encrypted_hex:
-                break
+    srv_sock = socket.socket()
+    srv_sock.bind((host, port))
+    srv_sock.listen(5)
+    print("Server siap, tunggu klien...")
 
-            # Receive encrypted message
-            print("Cipher (Hex - ECB):", encrypted_hex)
+    # Jalankan listener
+    threading.Thread(target=inp_listen, args=(srv_sock,)).start()
+
+    while True:
+        try:
+            # Terima koneksi
+            conn, addr = srv_sock.accept()
+            clnts.append(conn)
             
-            # Decrypt received message
-            decrypted_msg = decrypt_ecb_mode(encrypted_hex, keys)
-            print(f"Pesan terdekripsi: {decrypted_msg}")
-            
-            # Get response from server user
-            response = input("Pesan Anda: ")
-            if response.lower() == 'quit':
-                break
-                
-            # Encrypt and send response
-            bin_response = str_to_bin(response)
-            encrypted_response = encrypt_ecb_mode(bin_response, keys)
-            print("------------------")
-            conn.send(encrypted_response.encode())
-            
-    except Exception as e:
-        print(f"Error occurred: {e}")
-    finally:
-        conn.close()
-        server_socket.close()
+            # Mulai thread untuk tiap klien
+            threading.Thread(target=hndle, args=(conn, addr)).start()
+        except:
+            break
 
 if __name__ == "__main__":
-    server_program()
+    srv()
