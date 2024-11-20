@@ -14,6 +14,10 @@ def client_program():
     s.connect((host, port))
     print("Terhubung ke server.")
 
+    print("Menerima public key...")
+    public_key = s.recv(1024).decode()
+    print("Public Key:", public_key)
+
     def terima():
         while True:
             try:

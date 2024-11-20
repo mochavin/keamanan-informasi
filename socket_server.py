@@ -1,11 +1,23 @@
 import socket
 import threading
+from rsa import generate_rsa_keys
 
 # Array untuk koneksi
 clnts = []
+PUauth = None  # Store public key globally
+
+def send_public_key():
+    # Convert public key to string and send to all clients
+    key_str = str(PUauth)
+    for c in clnts:
+        try:
+            c.send(key_str.encode())
+        except:
+            print(f"Gagal mengirim kunci ke client")
 
 def hndle(conn, addr):
     print(f"Tersambung dengan: {addr}")
+
     while True:
         try:
             # Terima pesan terenkripsi
@@ -14,7 +26,6 @@ def hndle(conn, addr):
                 break
             print(f"Cipher (Hex - ECB) dari {addr}: {enc_hex}")
             
-            # Jika pesan adalah "bye", klien keluar
             if enc_hex.lower() == "bye":
                 print(f"{addr} keluar.")
                 break
@@ -28,7 +39,6 @@ def hndle(conn, addr):
             print(f"Kesalahan dengan {addr}")
             break
     
-    # Hapus koneksi
     clnts.remove(conn)
     conn.close()
 
@@ -43,6 +53,8 @@ def inp_listen(srv_sock):
             break
 
 def srv():
+    global PUauth
+    PUauth, PRauth = generate_rsa_keys()
     host = socket.gethostname()
     port = 5000
     
@@ -51,16 +63,18 @@ def srv():
     srv_sock.listen(5)
     print("Server siap, tunggu klien...")
 
-    # Jalankan listener
     threading.Thread(target=inp_listen, args=(srv_sock,)).start()
 
     while True:
         try:
-            # Terima koneksi
             conn, addr = srv_sock.accept()
             clnts.append(conn)
             
-            # Mulai thread untuk tiap klien
+            # Kirim PUauth ketika ada 2 client
+            if len(clnts) == 2:
+                print("2 client terkoneksi, mengirim public key...")
+                send_public_key()
+            
             threading.Thread(target=hndle, args=(conn, addr)).start()
         except:
             break
