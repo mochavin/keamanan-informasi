@@ -4,10 +4,6 @@ from des import convert_key, buat_keys, str_to_bin, encrypt_ecb_mode, decrypt_ec
 from rsa import encrypt_rsa
 import random
 
-KEY = "secretky"  
-key_bin = convert_key(KEY)
-keys = buat_keys(key_bin)
-
 def client_program():
     host = socket.gethostname()
     port = 5000
@@ -33,14 +29,19 @@ def client_program():
 
     # initiate key exchange
     # random string with length of 7 characters
-    DES_key = ''.join(random.choice('abcdefghijklmnopqrstuvwxyz') for _ in range(7))
+    DES_key = ''.join(random.choice('abcdefghijklmnopqrstuvwxyz') for _ in range(8))
     print("original des key:", DES_key)
 
-    # enkrip des key menggunakan RSA public key
-    enkrip_DES_key = encrypt_rsa(peer_public_key, DES_key)
-    encoded_key = ','.join(map(str, enkrip_DES_key))  # Convert list to comma-separated string
-    s.send(encoded_key.encode())
-    print("Berhasil mengirim des key.")
+    # signature pakai private key
+    signature_des_key = encrypt_rsa(my_private_key, DES_key)
+    str_signature_des_key = ','.join(map(str, signature_des_key))  
+
+    enkrip_DES_key = encrypt_rsa(peer_public_key, str_signature_des_key)
+    enkrip_DES_key = ','.join(map(str, enkrip_DES_key))  
+    s.send(enkrip_DES_key.encode())
+
+    key_bin = convert_key(DES_key)
+    keys = buat_keys(key_bin)
 
     def terima():
         while True:
@@ -58,8 +59,6 @@ def client_program():
     while True:
         pesan = input("----------\n")
         if pesan == 'bye':
-            bin_pesan = str_to_bin(pesan)
-            # enkrip_pesan = encrypt_ecb_mode(bin_pesan, keys)
             s.send(pesan.encode())
             print("Keluar.")
             break

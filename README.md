@@ -7,7 +7,7 @@ Keamanan Informasi (B)
 
 
 ## Pembagian Kerja
-- Moch. Avin: algoritma DES dan implementasi socket server dan client.
+- Moch. Avin: Semuanya
 
 
 ## Hasil

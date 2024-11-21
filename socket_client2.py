@@ -3,10 +3,6 @@ import threading
 from des import convert_key, buat_keys, str_to_bin, encrypt_ecb_mode, decrypt_ecb_mode
 from rsa import decrypt_rsa
 
-KEY = "secretky"  
-key_bin = convert_key(KEY)
-keys = buat_keys(key_bin)
-
 def client_program():
     host = socket.gethostname()
     port = 5000
@@ -34,7 +30,12 @@ def client_program():
     DES_key = s.recv(1024).decode()
     DES_key = list(map(int, DES_key.split(',')))
     dekrip_DES_key = decrypt_rsa(my_private_key, DES_key)
-    print("Des key:", dekrip_DES_key)
+    dekrip_DES_key = list(map(int, dekrip_DES_key.split(',')))
+    rill_DES_key = decrypt_rsa(peer_public_key, dekrip_DES_key)
+    print("rill signature des key:", rill_DES_key)
+
+    key_bin = convert_key(rill_DES_key)
+    keys = buat_keys(key_bin)
 
     def terima():
         while True:
