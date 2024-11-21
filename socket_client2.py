@@ -1,8 +1,7 @@
 import socket
 import threading
 from des import convert_key, buat_keys, str_to_bin, encrypt_ecb_mode, decrypt_ecb_mode
-from rsa import encrypt_rsa
-import random
+from rsa import decrypt_rsa
 
 KEY = "secretky"  
 key_bin = convert_key(KEY)
@@ -31,16 +30,11 @@ def client_program():
     PKA_public_key = tuple(map(int, PKA_public_key.strip('()').split(',')))
     print("PKA_Public Key:", PKA_public_key)
 
-    # initiate key exchange
-    # random string with length of 7 characters
-    DES_key = ''.join(random.choice('abcdefghijklmnopqrstuvwxyz') for _ in range(7))
-    print("original des key:", DES_key)
-
-    # enkrip des key menggunakan RSA public key
-    enkrip_DES_key = encrypt_rsa(peer_public_key, DES_key)
-    encoded_key = ','.join(map(str, enkrip_DES_key))  # Convert list to comma-separated string
-    s.send(encoded_key.encode())
-    print("Berhasil mengirim des key.")
+    # receive des key
+    DES_key = s.recv(1024).decode()
+    DES_key = list(map(int, DES_key.split(',')))
+    dekrip_DES_key = decrypt_rsa(my_private_key, DES_key)
+    print("Des key:", dekrip_DES_key)
 
     def terima():
         while True:

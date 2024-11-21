@@ -14,8 +14,10 @@ def mod_inverse(e, phi):
   return None
 
 def generate_rsa_keys():
-  p = 5779
-  q = 3769
+  p = random.choice([1151, 9173, 3793, 3457])
+  q = random.choice([1151, 9173, 3793, 3457])
+  while p == q:  # Ensure p and q are different
+    q = random.choice([1151, 9173, 3793, 3457])
   n = p * q
   phi = (p - 1) * (q - 1)
   e = random.randrange(2, phi)
@@ -42,9 +44,9 @@ def decrypt_rsa(private_key, ciphertext):
 
 # message = "Hello RSA!"
 
-# encrypted_message = encrypt(public_key, message)
+# encrypted_message = encrypt_rsa(public_key, message)
 # print("Encrypted Message:", encrypted_message)
 
-# decrypted_message = decrypt(private_key, encrypted_message)
+# decrypted_message = decrypt_rsa(private_key, encrypted_message)
 # print("Decrypted Message:", decrypted_message)
 

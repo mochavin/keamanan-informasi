@@ -1,6 +1,7 @@
 import socket
 import threading
 from rsa import generate_rsa_keys
+import time
 
 # Array untuk koneksi
 clnts = []
@@ -9,6 +10,15 @@ PUauth = None  # Store public key globally
 def send_public_key():
     # Convert public key to string and send to all clients
     key_str = str(PUauth)
+    PUa, PRa = generate_rsa_keys()
+    PUb, PRb = generate_rsa_keys()
+
+    clnts[0].send(str(PRa).encode())
+    clnts[1].send(str(PRb).encode())
+    clnts[0].send(str(PUb).encode())
+    clnts[1].send(str(PUa).encode())
+    time.sleep(1)
+    
     for c in clnts:
         try:
             c.send(key_str.encode())
