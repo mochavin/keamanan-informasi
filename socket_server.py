@@ -62,6 +62,7 @@ def hndle(conn, addr):
         try:
             # Terima pesan terenkripsi
             enc_hex = conn.recv(1024).decode()
+            print(f"Encrypted message dari {addr}: {enc_hex}")
             if not enc_hex:
                 break
             print(f"Cipher (Hex - ECB) dari {addr}: {enc_hex}")

@@ -18,6 +18,7 @@ def client_program():
     # Step 1:
     # Generate generate_rsa_keys
     PUa, PRa = generate_rsa_keys()
+    PUb = None
 
     # Generate timestamp1
     timestamp = int(time.time())
@@ -44,9 +45,73 @@ def client_program():
                 print(f"Error decoding response: {e}")
                 break
             print(f"decoded_response: {decoded_response}")
+            # Extract PUb from decoded_response
+            try:
+                # Get everything before the first second tuple
+                first_tuple_str = decoded_response.split('),(')[0]
+                # Clean up the string and convert to tuple
+                PUb = tuple(map(int, first_tuple_str.strip('()').split(',')))
+                break 
+            except Exception as e:
+                print(f"Error extracting PUb: {e}")
         except:
             print("Gagal menerima PUauth")
             break
+    
+    N1 = random.randint(1, 100)
+    
+    # Ready to Receive
+    try:
+        # Step 3:
+        # Send Identitas A (IDA) and N1 encrypted with PUb
+        print("\n---------- Send Identitas A (IDA) and N1 encrypted with PUb ----------")
+        payload = f"IDA,{N1}"
+        # encrypt payload with PUb
+        payload = encrypt_rsa(PUb, payload)
+        # change list to string
+        payload = ','.join(map(str, payload))
+        print(f"payload: {payload}")
+        s.send(payload.encode())
+        print("\n---------- Receive N1 and N2 encrypted with PUa ----------")
+        data = s.recv(1024).decode()
+        data = ast.literal_eval(data)
+        data = decrypt_rsa(PRa, data)
+        N1recv, N2recv = data.split(',', 1)
+        print("N1", N1)
+        print(f"N1recv: {N1recv}")
+        print(f"N2: {N2recv}")
+        if(str(N1) != N1recv):
+            print("Error: N1 tidak sama")
+            return
+        else:
+            print("Valid: N1 sama")
+        
+        # Send N2 encrypted with PUb
+        payload = f"{N2recv}"
+        payload = encrypt_rsa(PUb, payload)
+        # change list to string
+        payload = ','.join(map(str, payload))
+        s.send(payload.encode())
+
+
+    except Exception as e:
+        print("Error:", e)
+
+
+    
+    
+
+    # Step 3:
+    # Send Identitas A (IDA) and N1 encrypted with PUb
+    # print(f"PUb: {PUb}")
+    # N1 = random.randint(1, 100)
+    # payload = f"IDA,{N1}"
+    # # encrypt payload with PUb
+    # payload = encrypt_rsa(PUb, payload)
+    # # change list to string
+    # payload = ','.join(map(str, payload))
+    # s.send(payload.encode())
+
 
 
 

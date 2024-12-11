@@ -1,10 +1,11 @@
 import socket
 import threading
 from des import convert_key, buat_keys, str_to_bin, encrypt_ecb_mode, decrypt_ecb_mode
-from rsa import decrypt_rsa, generate_rsa_keys
+from rsa import decrypt_rsa, generate_rsa_keys, encrypt_rsa
 import time
 import ast
 from time import sleep
+import random
 
 def client_program():
     host = socket.gethostname()
@@ -17,6 +18,7 @@ def client_program():
     # Step 4:
     # Generate generate_rsa_keys
     PUb, PRb = generate_rsa_keys()
+    Pua = None
 
     # Generate timestamp
     timestamp = int(time.time())
@@ -44,11 +46,58 @@ def client_program():
                 print(f"Error decoding response: {e}")
                 break
             print(f"decoded_response: {decoded_response}")
+            # extract PUa from decoded_response
+            try:
+                # Get everything before the first second tuple
+                first_tuple_str = decoded_response.split('),(')[0]
+                # Clean up the string and convert to tuple
+                PUa = tuple(map(int, first_tuple_str.strip('()').split(',')))
+                break 
+            except Exception as e:
+                print(f"Error extracting PUb: {e}")
         except:
             print("Gagal menerima PUauth")
             break
 
+    N2 = random.randint(1, 100)
 
+    # Ready to Receive
+    try:
+        data = s.recv(1024).decode()
+        print("\n---------- Receive Identitas A (IDA) and N1 encrypted with PUb ----------")
+        # change string to list integer
+        data = ast.literal_eval(data)
+        data = decrypt_rsa(PRb, data)
+        ida, N1 = data.rsplit(',', 1)
+        print(f"IDA: {ida}")
+
+        
+        # Send N1 and N2 to A encrypted with PUa
+        payload = f"{N1},{N2}"
+        payload = encrypt_rsa(PUa, payload)
+        # change list to string
+        payload = ','.join(map(str, payload))
+        print("N1", N1)
+        print("N2", N2)
+        s.send(payload.encode())
+
+        print("\n---------- Receive N2 encrypted with PUb ----------")
+        data = s.recv(1024).decode()
+        data = ast.literal_eval(data)
+        data = decrypt_rsa(PRb, data)
+        N2recv = data
+        print(f"N2recv: {N2recv}")
+        if(str(N2) != N2recv):
+            print("Error: N2 tidak sama")
+            return
+        else:
+            print("Valid: N2 sama")
+
+    except Exception as e:
+        print("Error:", e)
+    
+    
+    
 
 
     # print("Menerima my private key...")
