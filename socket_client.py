@@ -59,6 +59,8 @@ def client_program():
             break
     
     N1 = random.randint(1, 100)
+    DES_key = ''.join(random.choice('abcdefghijklmnopqrstuvwxyz') for _ in range(8))
+
     
     # Ready to Receive
     try:
@@ -93,83 +95,49 @@ def client_program():
         payload = ','.join(map(str, payload))
         s.send(payload.encode())
 
+        # Cryptosystems to send DES key
+        print("original des key:", DES_key)
+
+        # signature pakai private key
+        signature_des_key = encrypt_rsa(PRa, DES_key)
+        # change list to string
+        signature_des_key = ','.join(map(str, signature_des_key))  
+
+        # encrypt signature des key
+        encrypted_DES_key = encrypt_rsa(PUb, signature_des_key)
+        # change list to string
+        encrypted_DES_key = ','.join(map(str, encrypted_DES_key))
+        s.send(encrypted_DES_key.encode())
 
     except Exception as e:
         print("Error:", e)
 
+    key_bin = convert_key(DES_key)
+    keys = buat_keys(key_bin)
 
+    def terima():
+        while True:
+            try:
+                data = s.recv(1024).decode()
+                if not data:
+                    break
+                print("Pesan:", decrypt_ecb_mode(data, keys))
+            except Exception as e:
+                print("Error:", e)
+                break
     
-    
+    threading.Thread(target=terima).start()
 
-    # Step 3:
-    # Send Identitas A (IDA) and N1 encrypted with PUb
-    # print(f"PUb: {PUb}")
-    # N1 = random.randint(1, 100)
-    # payload = f"IDA,{N1}"
-    # # encrypt payload with PUb
-    # payload = encrypt_rsa(PUb, payload)
-    # # change list to string
-    # payload = ','.join(map(str, payload))
-    # s.send(payload.encode())
-
-
-
-
-
-    # print("Menerima my private key...")
-    # my_private_key = s.recv(1024).decode()
-    # my_private_key = tuple(map(int, my_private_key.strip('()').split(',')))
-    # print("Private Key:", my_private_key)
-
-    # print("Menerima peer public key...")
-    # peer_public_key = s.recv(1024).decode()
-    # peer_public_key = tuple(map(int, peer_public_key.strip('()').split(',')))
-    # print("Public Key:", peer_public_key)
-
-    # print("Menerima PKA public key...")
-    # PKA_public_key = s.recv(1024).decode()
-    # PKA_public_key = tuple(map(int, PKA_public_key.strip('()').split(',')))
-    # print("PKA_Public Key:", PKA_public_key)
-
-    # # initiate key exchange
-    # # random string with length of 7 characters
-    # DES_key = ''.join(random.choice('abcdefghijklmnopqrstuvwxyz') for _ in range(8))
-    # print("original des key:", DES_key)
-
-    # # signature pakai private key
-    # signature_des_key = encrypt_rsa(my_private_key, DES_key)
-    # str_signature_des_key = ','.join(map(str, signature_des_key))  
-
-    # enkrip_DES_key = encrypt_rsa(peer_public_key, str_signature_des_key)
-    # enkrip_DES_key = ','.join(map(str, enkrip_DES_key))  
-    # s.send(enkrip_DES_key.encode())
-
-    # key_bin = convert_key(DES_key)
-    # keys = buat_keys(key_bin)
-
-    # def terima():
-    #     while True:
-    #         try:
-    #             data = s.recv(1024).decode()
-    #             if not data:
-    #                 break
-    #             print("Pesan:", decrypt_ecb_mode(data, keys))
-    #         except Exception as e:
-    #             print("Error:", e)
-    #             break
-    
-    # threading.Thread(target=terima).start()
-
-    # while True:
-    #     pesan = input("----------\n")
-    #     if pesan == 'bye':
-    #         s.send(pesan.encode())
-    #         print("Keluar.")
-    #         break
-    #     else:
-    #         bin_pesan = str_to_bin(pesan)
-    #         enkrip_pesan = encrypt_ecb_mode(bin_pesan, keys)
-    #         s.send(enkrip_pesan.encode())
+    while True:
+        pesan = input("----------\n")
+        if pesan == 'bye':
+            s.send(pesan.encode())
+            print("Keluar.")
+            break
+        else:
+            bin_pesan = str_to_bin(pesan)
+            enkrip_pesan = encrypt_ecb_mode(bin_pesan, keys)
+            s.send(enkrip_pesan.encode())
 
     s.close()
 
