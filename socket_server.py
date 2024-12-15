@@ -84,7 +84,7 @@ def hndle(conn, addr):
 def inp_listen(srv_sock):
     while True:
         cmd = input("Ketik 'quit' untuk hentikan server: ")
-        if cmd.lower() == "quit":
+        if cmd.lower() == "quit" or (len(clnts) == 0 and timestamp1 and timestamp2):
             print("Matikan server dan putus koneksi")
             for c in clnts:
                 c.close()
