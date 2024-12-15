@@ -7,6 +7,24 @@ import ast
 from time import sleep
 import random
 
+def is_new_DES_key(data):
+    # Implement a way to identify DES key messages, e.g., specific prefix
+    return data.startswith("DES_KEY:")
+
+def update_DES_key(data, PRb, PUb, PUa):
+    try:
+        encrypted_signature = data.replace("DES_KEY:", "")
+        decrypted_signature = decrypt_rsa(PRb, list(map(int, encrypted_signature.split(','))))
+        DES_key = decrypt_rsa(PUa, ast.literal_eval(decrypted_signature))
+        global keys
+        key_bin = convert_key(DES_key)
+        keys = buat_keys(key_bin)
+        print("\n---------- Update DES key ----------")
+        print("DES key updated:", DES_key)
+        print("------------------------------------\n")
+    except Exception as e:
+        print("Error updating DES key:", e)
+
 def client_program():
     host = socket.gethostname()
     port = 5000
@@ -107,6 +125,7 @@ def client_program():
     s.send(b'bye')
     
     key_bin = convert_key(DES_key)
+    global keys
     keys = buat_keys(key_bin)
 
     # Start a server to accept direct connection from Client A
@@ -128,7 +147,10 @@ def client_program():
                     data = conn_direct.recv(1024).decode()
                     if not data:
                         break
-                    print("Pesan dari Client A:", decrypt_ecb_mode(data, keys))
+                    if is_new_DES_key(data):
+                        update_DES_key(data, PRb, PUb, PUa)
+                    else:
+                        print("Pesan dari Client A:", decrypt_ecb_mode(data, keys))
                 except Exception as e:
                     print("Error:", e)
                     break
@@ -152,31 +174,7 @@ def client_program():
     except Exception as e:
         print("Gagal memulai server langsung:", e)
 
-    # def terima():
-    #     while True:
-    #         try:
-    #             data = s.recv(1024).decode()
-    #             if not data:
-    #                 break
-    #             print("Pesan:", decrypt_ecb_mode(data, keys))
-    #         except Exception as e:
-    #             print("Error:", e)
-    #             break
-    
-    # threading.Thread(target=terima).start()
 
-    # while True:
-    #     pesan = input("----------\n")
-    #     if pesan == 'bye':
-    #         bin_pesan = str_to_bin(pesan)
-    #         # enkrip_pesan = encrypt_ecb_mode(bin_pesan, keys)
-    #         s.send(pesan.encode())
-    #         print("Keluar.")
-    #         break
-    #     else:
-    #         bin_pesan = str_to_bin(pesan)
-    #         enkrip_pesan = encrypt_ecb_mode(bin_pesan, keys)
-    #         s.send(enkrip_pesan.encode())
 
     s.close()
 

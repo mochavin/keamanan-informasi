@@ -7,6 +7,31 @@ import random
 import time
 from time import sleep
 
+def send_new_DES_key(s, PUb, PRa):
+    while True:
+        sleep(7200)  # 2 hours in seconds
+        DES_key = ''.join(random.choice('abcdefghijklmnopqrstuvwxyz') for _ in range(8))
+        print("Generated new DES key:", DES_key)
+        
+        # Encrypt and sign the DES key
+        signature_des_key = encrypt_rsa(PRa, DES_key)
+        signature_des_key = ','.join(map(str, signature_des_key))  
+        encrypted_DES_key = encrypt_rsa(PUb, signature_des_key)
+        encrypted_DES_key = ','.join(map(str, encrypted_DES_key))
+        
+        # Send the new DES key
+        s.send(f"DES_KEY:{encrypted_DES_key}".encode())
+        print("\n---------- Send new DES key to Client B ----------")
+        print("New DES key sent to Client B.")
+        print("---------------------------------------------------\n")
+
+        # Update the keys variable with the new DES key
+        key_bin = convert_key(DES_key)
+        global keys
+        keys = buat_keys(key_bin)
+
+
+
 def client_program():
     host = socket.gethostname()
     port = 5000
@@ -111,7 +136,11 @@ def client_program():
     # Send "bye" to server to disconnect
     s.send(b'bye')
 
+    # Start thread to send new DES key every 2 hours
+    
+
     key_bin = convert_key(DES_key)
+    global keys
     keys = buat_keys(key_bin)
 
     # Start connect to Client B
@@ -122,7 +151,8 @@ def client_program():
         direct_sock = socket.socket()
         direct_sock.connect((direct_host, direct_port))
         print("Terhubung langsung ke Client B.")
-
+        
+        threading.Thread(target=send_new_DES_key, args=(direct_sock, PUb, PRa), daemon=True).start()
         
 
         def terima_direct():
@@ -153,32 +183,6 @@ def client_program():
 
     except Exception as e:
         print("Gagal terhubung langsung ke Client B:", e)
-
-    
-
-    # def terima():
-    #     while True:
-    #         try:
-    #             data = s.recv(1024).decode()
-    #             if not data:
-    #                 break
-    #             print("Pesan:", decrypt_ecb_mode(data, keys))
-    #         except Exception as e:
-    #             print("Error:", e)
-    #             break
-    
-    # threading.Thread(target=terima).start()
-
-    # while True:
-    #     pesan = input("----------\n")
-    #     if pesan == 'bye':
-    #         s.send(pesan.encode())
-    #         print("Keluar.")
-    #         break
-    #     else:
-    #         bin_pesan = str_to_bin(pesan)
-    #         enkrip_pesan = encrypt_ecb_mode(bin_pesan, keys)
-    #         s.send(enkrip_pesan.encode())
 
     s.close()
 
